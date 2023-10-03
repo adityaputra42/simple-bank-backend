@@ -37,11 +37,11 @@ func (store *Store) ExecTx(ctx context.Context, fn func(*Queries) error) error {
 	return tx.Commit()
 }
 
-type TransferTxParams struct {
-	FromAccountID int64 `json:"from_account_id"`
-	ToAccountID   int64 `json:"to_account_id"`
-	Amount        int64 `json:"amount"`
-}
+// type TransferTxParams struct {
+// 	FromAccountID int64 `json:"from_account_id"`
+// 	ToAccountID   int64 `json:"to_account_id"`
+// 	Amount        int64 `json:"amount"`
+// }
 
 type TransferTxResult struct {
 	Transfer    Transfer `json:"transfer"`
@@ -53,12 +53,11 @@ type TransferTxResult struct {
 
 // TransferTx melakukan  transfer uang dari akun yg satu ke akun lainnya
 // itu membuat transfer record, menambahkan account entries dan mengupdate account, balance dalam transaksi database tunggal
-func (store *Store) TransferTx(ctx context.Context, arg TransferTxParams) (TransferTxResult, error) {
+func (store *Store) TransferTx(ctx context.Context, arg CreateTransferParams) (TransferTxResult, error) {
 	var result TransferTxResult
 	err := store.ExecTx(ctx, func(q *Queries) error {
 		var err error
 		result.Transfer, err = q.CreateTransfer(ctx, CreateTransferParams{
-
 			FromAccountID: arg.FromAccountID,
 			ToAccountID:   arg.ToAccountID,
 			Amount:        arg.Amount,
@@ -81,7 +80,7 @@ func (store *Store) TransferTx(ctx context.Context, arg TransferTxParams) (Trans
 			return err
 		}
 
-		// TODO: update account balance 
+		// TODO: update account balance
 
 		return nil
 	})
