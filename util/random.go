@@ -36,7 +36,7 @@ func RandomBalance() int64 {
 }
 func RandomCurrency() string {
 	currencies := []string{
-		"IDR", "USD", "EUR",
+		IDR, USD, EUR,
 	}
 	n := len(currencies)
 	return currencies[rand.Intn(n)]
