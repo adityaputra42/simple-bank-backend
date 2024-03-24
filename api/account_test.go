@@ -19,7 +19,7 @@ import (
 )
 
 func TestGetAccount(t *testing.T) {
-	account := randomAccount()
+	account := randomAccount(util.RandomCurrency())
 
 	testCase := []struct {
 		name          string
@@ -90,7 +90,8 @@ func TestGetAccount(t *testing.T) {
 			// build stub
 			tc.buildStubs(store)
 			// Start test server and send request
-			server := NewServer(store)
+			server := NewTestServer(t, store)
+
 			recorder := httptest.NewRecorder()
 
 			url := fmt.Sprintf("/accounts/%d", tc.accountID)
@@ -107,12 +108,12 @@ func TestGetAccount(t *testing.T) {
 
 }
 
-func randomAccount() db.Account {
+func randomAccount(Currency string) db.Account {
 	return db.Account{
 		ID:       util.RandomInt(1, 1000),
 		Owner:    util.RandomOwner(),
 		Balance:  util.RandomBalance(),
-		Currency: util.RandomCurrency(),
+		Currency: Currency,
 	}
 }
 
