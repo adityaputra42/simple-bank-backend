@@ -1,4 +1,3 @@
-version: "3.8"
 services:
   postgres:
     image: postgres:16-alpine
@@ -6,6 +5,11 @@ services:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: root
       POSTGRES_DB: simple_bank
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d simple_bank"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   api:
     build:
@@ -16,6 +20,7 @@ services:
     environment:
       - DB_SOURCE=postgresql://root:root@postgres:5432/simple_bank?sslmode=disable
     depends_on:
-      - postgres
-    entrypoint: ["/app/wait-for.sh", "postgres:5432", "--", "/app/start.sh"]
+      postgres:
+        condition: service_healthy
+    entrypoint: ["/app/start.sh"]
     command: ["/app/main"]
