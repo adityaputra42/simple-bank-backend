@@ -1,25 +1,26 @@
-version: '3.5'
-
 services:
   postgres:
-    container_name: postgres_container
-    image: postgres:16.1-alpine3.17
+    image: postgres:16-alpine
     environment:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: root
       POSTGRES_DB: simple_bank
-      PGDATA: /data/postgres
-    volumes:
-       - postgres:/data/postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d simple_bank"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
-      - "5432:5432"
-    networks:
-      - postgres
-    restart: unless-stopped
-
-networks:
-  postgres:
-    driver: bridge
-
-volumes:
-    postgres:
+      - "8080:8080"
+    environment:
+      - DB_SOURCE=postgresql://root:root@postgres:5432/simple_bank?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["/app/start.sh"]
+    command: ["/app/main"]
