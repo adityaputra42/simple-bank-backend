@@ -6,7 +6,7 @@ package pb;
 
 import "google/protobuf/timestamp.proto";
 
-option go_package = "simple_bank_solid/pb";
+option go_package = "simple-bank/pb";
 
 
 message User {

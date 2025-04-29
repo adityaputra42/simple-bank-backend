@@ -3,11 +3,11 @@ syntax = "proto3";
 
 package pb;
 
-import  "rpc_create_user.proto";
 import  "rpc_login_user.proto";
+import "rpc_create_user.proto";
 
 
-option go_package = "simple_bank_solid/pb";
+option go_package = "simple-bank/pb";
 
 
 service SimpleBank {
