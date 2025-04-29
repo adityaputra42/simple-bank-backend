@@ -3,8 +3,7 @@ syntax = "proto3";
 
 package pb;
 
-import  "user.proto";
-
+import "user.proto";
 
 option go_package = "simple-bank/pb";
 

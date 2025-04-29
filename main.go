@@ -46,6 +46,7 @@ func runGrpcServer(config util.Config, store db.Store) {
 	}
 
 	log.Printf("start gRPC server at %s", listener.Addr().String())
+	log.Printf("Listening on: %s", config.GrpcServerAddress)
 
 	err = grpcServer.Serve(listener)
 	if err != nil {
