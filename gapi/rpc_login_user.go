@@ -3,6 +3,7 @@ package gapi
 import (
 	"context"
 	"database/sql"
+	"log"
 	"simple-bank/pb"
 	"simple-bank/util"
 
@@ -17,7 +18,7 @@ func (server *Server) LoginUser(ctx context.Context, req *pb.LoginUserRequest) (
 		if err == sql.ErrNoRows {
 			status.Errorf(codes.NotFound, "user not found")
 		}
-		status.Errorf(codes.Internal, err.Error())
+		status.Errorf(codes.Internal, "%s", err.Error())
 
 	}
 
@@ -25,7 +26,9 @@ func (server *Server) LoginUser(ctx context.Context, req *pb.LoginUserRequest) (
 	if err != nil {
 		status.Errorf(codes.Unauthenticated, "Unauthorized")
 	}
-
+	mtdt := server.extractMetadata(ctx)
+	log.Printf("userAgent: %v", mtdt.UserAgent)
+	log.Printf("ClientIp: %v", mtdt.ClientIP)
 	accessToken, err := server.tokenMaker.CreateToken(user.Username, server.config.AccessTokenDuration)
 
 	if err != nil {
