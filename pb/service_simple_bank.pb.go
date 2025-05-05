@@ -26,14 +26,14 @@ var File_service_simple_bank_proto protoreflect.FileDescriptor
 
 const file_service_simple_bank_proto_rawDesc = "" +
 	"\n" +
-	"\x19service_simple_bank.proto\x12\x02pb\x1a\x1cgoogle/api/annotations.proto\x1a\x14rpc_login_user.proto\x1a\x15rpc_create_user.proto\x1a.protoc-gen-openapiv2/options/annotations.proto2\xb5\x01\n" +
+	"\x19service_simple_bank.proto\x12\x02pb\x1a\x1cgoogle/api/annotations.proto\x1a\x14rpc_login_user.proto\x1a\x15rpc_create_user.proto\x1a.protoc-gen-openapiv2/options/annotations.proto2\x9d\x02\n" +
 	"\n" +
-	"SimpleBank\x12W\n" +
+	"SimpleBank\x12\x8e\x01\n" +
 	"\n" +
-	"CreateUser\x12\x15.pb.CreateUserRequest\x1a\x16.pb.CreateUserResponse\"\x1a\x82\xd3\xe4\x93\x02\x14:\x01*\"\x0f/v1/create_user\x12N\n" +
-	"\tLoginUser\x12\x14.pb.LoginUserRequest\x1a\x15.pb.LoginUserResponse\"\x14\x82\xd3\xe4\x93\x02\x0e:\x01*\"\t/v1/loginB{\x92Ah\x12f\n" +
+	"CreateUser\x12\x15.pb.CreateUserRequest\x1a\x16.pb.CreateUserResponse\"Q\x92A4\x12\x0fCreate New User\x1a!Use this Api to create a new user\x82\xd3\xe4\x93\x02\x14:\x01*\"\x0f/v1/create_user\x12~\n" +
+	"\tLoginUser\x12\x14.pb.LoginUserRequest\x1a\x15.pb.LoginUserResponse\"D\x92A-\x12\x0flogin user User\x1a\x1aUse this Api to login user\x82\xd3\xe4\x93\x02\x0e:\x01*\"\t/v1/loginB{\x92Ah\x12f\n" +
 	"\vSimple Bank\"R\n" +
-	"\x14Aditya Putra Pratama\x12 https://github.com/adityaputra42\x1a\x18aditiyaputra42@gmail.com2\x031.0Z\x0esimple-bank/pbb\x06proto3"
+	"\x14Aditya Putra Pratama\x12 https://github.com/adityaputra42\x1a\x18aditiyaputra42@gmail.com2\x031.1Z\x0esimple-bank/pbb\x06proto3"
 
 var file_service_simple_bank_proto_goTypes = []any{
 	(*CreateUserRequest)(nil),  // 0: pb.CreateUserRequest

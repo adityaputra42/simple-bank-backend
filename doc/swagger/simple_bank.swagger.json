@@ -2,7 +2,7 @@
   "swagger": "2.0",
   "info": {
     "title": "Simple Bank",
-    "version": "1.0",
+    "version": "1.1",
     "contact": {
       "name": "Aditya Putra Pratama",
       "url": "https://github.com/adityaputra42",
@@ -23,6 +23,8 @@
   "paths": {
     "/v1/create_user": {
       "post": {
+        "summary": "Create New User",
+        "description": "Use this Api to create a new user",
         "operationId": "SimpleBank_CreateUser",
         "responses": {
           "200": {
@@ -55,6 +57,8 @@
     },
     "/v1/login": {
       "post": {
+        "summary": "login user User",
+        "description": "Use this Api to login user",
         "operationId": "SimpleBank_LoginUser",
         "responses": {
           "200": {
