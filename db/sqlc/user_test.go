@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"simple-bank/util"
 	"testing"
 	"time"
@@ -48,4 +49,51 @@ func TestGetUser(t *testing.T) {
 	assert.Equal(t, user1.FullName, user2.FullName)
 	assert.Equal(t, user1.Email, user2.Email)
 	require.WithinDuration(t, user1.CreatedAt, user2.CreatedAt, time.Second)
+}
+
+func TestUpdateUserOnlyFullName(t *testing.T) {
+	oldUser := CreateRandomUser(t)
+	newFullName := util.RandomOwner()
+	newUser, err := testQuery.UpdateUser(context.Background(), UpdateUserParams{FullName: sql.NullString{
+		String: newFullName, Valid: true,
+	}, Username: oldUser.Username})
+
+	require.NoError(t, err)
+	require.NotEmpty(t, newUser)
+	assert.Equal(t, oldUser.Username, newUser.Username)
+	assert.Equal(t, oldUser.Email, newUser.Email)
+	assert.Equal(t, oldUser.HashedPassword, newUser.HashedPassword)
+	assert.NotEqual(t, oldUser.FullName, newUser.FullName)
+}
+
+func TestUpdateUserOnlyHashPassword(t *testing.T) {
+	oldUser := CreateRandomUser(t)
+	newPassword := util.RandomString(10)
+	newHashPassword, err := util.HashPassword(newPassword)
+	require.NoError(t, err)
+	newUser, err := testQuery.UpdateUser(context.Background(), UpdateUserParams{HashedPassword: sql.NullString{
+		String: newHashPassword, Valid: true,
+	}, Username: oldUser.Username})
+
+	require.NoError(t, err)
+	require.NotEmpty(t, newUser)
+	assert.Equal(t, oldUser.Username, newUser.Username)
+	assert.Equal(t, oldUser.Email, newUser.Email)
+	assert.NotEqual(t, oldUser.HashedPassword, newUser.HashedPassword)
+	assert.Equal(t, oldUser.FullName, newUser.FullName)
+}
+
+func TestUpdateUserOnlyEmail(t *testing.T) {
+	oldUser := CreateRandomUser(t)
+	newEmail := util.RandomEmail()
+	newUser, err := testQuery.UpdateUser(context.Background(), UpdateUserParams{Email: sql.NullString{
+		String: newEmail, Valid: true,
+	}, Username: oldUser.Username})
+
+	require.NoError(t, err)
+	require.NotEmpty(t, newUser)
+	assert.Equal(t, oldUser.Username, newUser.Username)
+	assert.NotEqual(t, oldUser.Email, newUser.Email)
+	assert.Equal(t, oldUser.HashedPassword, newUser.HashedPassword)
+	assert.Equal(t, oldUser.FullName, newUser.FullName)
 }
