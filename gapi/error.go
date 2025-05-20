@@ -23,3 +23,7 @@ func invalidArgumentError(violation []*errdetails.BadRequest_FieldViolation) err
 	}
 	return statusDetail.Err()
 }
+
+func unauthenticatedError(err error) error {
+	return status.Errorf(codes.Unauthenticated, "Unauthorized: %s", err)
+}
