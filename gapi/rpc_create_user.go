@@ -25,10 +25,10 @@ func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 	}
 
 	arg := db.CreateUserParams{
-		Username:       req.Username,
+		Username:       req.GetUsername(),
 		HashedPassword: hashedPassword,
-		FullName:       req.FullName,
-		Email:          req.Email,
+		FullName:       req.GetFullName(),
+		Email:          req.GetEmail(),
 	}
 
 	user, err := server.store.CreateUser(ctx, arg)
