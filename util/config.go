@@ -13,6 +13,7 @@ type Config struct {
 	MigrationUrl        string        `mapstructure:"MIGRATION_URL"`
 	HttpServerAddress   string        `mapstructure:"HTTP_SERVER_ADDRESS"`
 	GrpcServerAddress   string        `mapstructure:"GRPC_SERVER_ADDRESS"`
+	RedisAddress        string        `mapstructure:"REDIS_ADDRESS"`
 	TokenSymetricKey    string        `mapstructure:"TOKEN_SYMENTRIC_KEY"`
 	AccessTokenDuration time.Duration `mapstructure:"ACCESS_TOKEN_DURATION"`
 }
