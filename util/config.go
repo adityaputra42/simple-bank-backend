@@ -16,13 +16,16 @@ type Config struct {
 	RedisAddress        string        `mapstructure:"REDIS_ADDRESS"`
 	TokenSymetricKey    string        `mapstructure:"TOKEN_SYMENTRIC_KEY"`
 	AccessTokenDuration time.Duration `mapstructure:"ACCESS_TOKEN_DURATION"`
+	EmailSenderName     string        `mapstructure:"EMAIL_SENDER_NAME"`
+	EmailSenderAddress  string        `mapstructure:"EMAIL_SENDER_ADDRESS"`
+	EmailSenderPassword string        `mapstructure:"EMAIL_SENDER_PASSWORD"`
 }
 
 func LoadConfig(path string) (config Config, err error) {
 
 	viper.AddConfigPath(path)
-	viper.SetConfigFile(".env")
-
+	viper.SetConfigName(".env")
+	viper.SetConfigType("env")
 	viper.AutomaticEnv()
 
 	err = viper.ReadInConfig()
