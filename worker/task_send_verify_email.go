@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	db "simple-bank/db/sqlc"
+	"simple-bank/util"
 
 	"github.com/hibiken/asynq"
 	"github.com/rs/zerolog/log"
@@ -50,6 +52,27 @@ func (processor *RedisTaskProsesor) ProcessTaskSendVerifyEmail(ctx context.Conte
 		// 	return fmt.Errorf("user not found : %w", asynq.SkipRetry)
 		// }
 		return fmt.Errorf("failed to get user : %w", err)
+	}
+	arg := db.CreateVerifyEmailParams{
+		Username:   user.Username,
+		Email:      user.Email,
+		SecretCode: util.RandomString(32),
+	}
+
+	verifyEmail, err := processor.store.CreateVerifyEmail(ctx, arg)
+	if err != nil {
+		return fmt.Errorf("failed to create verify enail : %w", err)
+	}
+
+	subject := "welcome to simple bank"
+	verifyUrl := fmt.Sprintf("http://simple-bank.org?id=%d&secret_code=%s", verifyEmail.ID, verifyEmail.SecretCode)
+	content := fmt.Sprintf(`Hello %s,<br/>
+	Thank you for registering with us! <br/>
+	Please <a href="%s">click here</a> to verify your email address.<br/>`, user.FullName, verifyUrl)
+
+	err = processor.mailer.SendEmail(subject, content, []string{verifyEmail.Email}, nil, nil, nil)
+	if err != nil {
+		return fmt.Errorf("failed to send verify enail : %w", err)
 	}
 
 	// Send email to user

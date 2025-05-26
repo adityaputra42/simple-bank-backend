@@ -10,6 +10,10 @@ import (
 )
 
 func TestSenderEmail(t *testing.T) {
+
+	if testing.Short() {
+		t.Skip()
+	}
 	dir, _ := os.Getwd()
 	fmt.Println("Running test from:", dir)
 

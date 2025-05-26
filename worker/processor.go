@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	db "simple-bank/db/sqlc"
+	"simple-bank/mail"
 
 	"github.com/hibiken/asynq"
 	"github.com/rs/zerolog/log"
@@ -21,6 +22,7 @@ type TaskProsessor interface {
 type RedisTaskProsesor struct {
 	server *asynq.Server
 	store  db.Store
+	mailer mail.EmailSender
 }
 
 // Start implements TaskProsessor.
@@ -32,7 +34,7 @@ func (processor *RedisTaskProsesor) Start() error {
 	return processor.server.Start(mux)
 }
 
-func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, db db.Store) TaskProsessor {
+func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, db db.Store, mailer mail.EmailSender) TaskProsessor {
 	server := asynq.NewServer(
 		redisOpt,
 		asynq.Config{
@@ -48,5 +50,5 @@ func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, db db.Store) TaskProse
 		},
 	)
 
-	return &RedisTaskProsesor{server: server, store: db}
+	return &RedisTaskProsesor{server: server, store: db, mailer: mailer}
 }
