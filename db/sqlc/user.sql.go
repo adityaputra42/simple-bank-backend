@@ -72,11 +72,13 @@ func (q *Queries) GetUser(ctx context.Context, username string) (User, error) {
 const updateUser = `-- name: UpdateUser :one
 UPDATE users
 SET 
-hashed_password = COALESCE($1,hashed_password) ,
-password_changed_at = COALESCE($2,password_changed_at) ,
-full_name = COALESCE($3,full_name) ,
-email = COALESCE($4,email) 
-WHERE username = $5
+  hashed_password = COALESCE($1,hashed_password) ,
+  password_changed_at = COALESCE($2,password_changed_at) ,
+  full_name = COALESCE($3,full_name) ,
+  email = COALESCE($4,email),
+  is_verified_email = COALESCE($5,is_verified_email) 
+WHERE 
+  username = $6
 RETURNING username, hashed_password, full_name, email, password_changed_at, created_at, is_verified_email
 `
 
@@ -85,6 +87,7 @@ type UpdateUserParams struct {
 	PasswordChangedAt sql.NullTime   `json:"password_changed_at"`
 	FullName          sql.NullString `json:"full_name"`
 	Email             sql.NullString `json:"email"`
+	IsVerifiedEmail   sql.NullBool   `json:"is_verified_email"`
 	Username          string         `json:"username"`
 }
 
@@ -94,6 +97,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		arg.PasswordChangedAt,
 		arg.FullName,
 		arg.Email,
+		arg.IsVerifiedEmail,
 		arg.Username,
 	)
 	var i User
