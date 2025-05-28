@@ -11,7 +11,7 @@ import (
 
 const (
 	authorizationHeader = "authorization"
-	authorizationBeare  = "bearer"
+	authorizationBearer = "bearer"
 )
 
 func (server *Server) authorizationUser(ctx context.Context) (*token.Payload, error) {
@@ -32,7 +32,7 @@ func (server *Server) authorizationUser(ctx context.Context) (*token.Payload, er
 		return nil, fmt.Errorf("invalid authorization header format")
 	}
 	authType := strings.ToLower(fields[0])
-	if authType != authorizationBeare {
+	if authType != authorizationBearer {
 		return nil, fmt.Errorf("unsupported authorization type %s", authType)
 
 	}
