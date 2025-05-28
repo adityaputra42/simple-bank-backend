@@ -16,7 +16,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang/mock/gomock"
-	"github.com/lib/pq"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -105,7 +105,7 @@ func TestCreateUserApi(t *testing.T) {
 				"email":     user.Email,
 			},
 			buildStubs: func(store *mockdb.MockStore) {
-				store.EXPECT().CreateUser(gomock.Any(), gomock.Any()).Times(1).Return(db.User{}, &pq.Error{Code: "23505"})
+				store.EXPECT().CreateUser(gomock.Any(), gomock.Any()).Times(1).Return(db.User{}, db.ErrUniqueViolation)
 
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
