@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/hibiken/asynq"
-	"github.com/lib/pq"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -51,11 +50,10 @@ func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 
 	result, err := server.store.CreateUserTx(ctx, arg)
 	if err != nil {
-		if pqErr, ok := err.(*pq.Error); ok {
-			switch pqErr.Code.Name() {
-			case "unique_violation":
-				return nil, status.Errorf(codes.AlreadyExists, "Username already exist %s", arg.Username)
-			}
+		if db.ErrorCode(err) == db.UniwueViolation {
+
+			return nil, status.Errorf(codes.AlreadyExists, "Username already exist %s", arg.Username)
+
 		}
 		return nil, status.Errorf(codes.Internal, "Failed to create user")
 	}

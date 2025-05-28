@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"database/sql"
 	"simple-bank/util"
 	"testing"
 	"time"
@@ -18,7 +17,7 @@ func CreateRandomEntry(t *testing.T) Entry {
 		Amount:    util.RandomBalance(),
 	}
 
-	Entry, err := testQuery.CreateEntry(context.Background(), arg)
+	Entry, err := testStore.CreateEntry(context.Background(), arg)
 	require.NoError(t, err)
 	require.NotEmpty(t, Entry)
 	assert.Equal(t, arg.AccountID, Entry.AccountID)
@@ -35,7 +34,7 @@ func TestCreateEntry(t *testing.T) {
 
 func TestGetEntry(t *testing.T) {
 	Entry1 := CreateRandomEntry(t)
-	Entry2, err := testQuery.GetEntry(context.Background(), Entry1.ID)
+	Entry2, err := testStore.GetEntry(context.Background(), Entry1.ID)
 	require.NoError(t, err)
 	require.NotEmpty(t, Entry2)
 	assert.Equal(t, Entry1.AccountID, Entry2.AccountID)
@@ -49,7 +48,7 @@ func TestUpdateEntry(t *testing.T) {
 		ID:     Entry1.ID,
 		Amount: util.RandomBalance(),
 	}
-	Entry2, err := testQuery.UpdateEntry(context.Background(), arg)
+	Entry2, err := testStore.UpdateEntry(context.Background(), arg)
 	require.NoError(t, err)
 	require.NotEmpty(t, Entry2)
 	assert.Equal(t, Entry1.AccountID, Entry2.AccountID)
@@ -60,11 +59,11 @@ func TestUpdateEntry(t *testing.T) {
 
 func TestDeleteEntry(t *testing.T) {
 	Entry1 := CreateRandomEntry(t)
-	err := testQuery.DeleteEntry(context.Background(), Entry1.ID)
+	err := testStore.DeleteEntry(context.Background(), Entry1.ID)
 	require.NoError(t, err)
-	Entry2, err := testQuery.GetEntry(context.Background(), Entry1.ID)
+	Entry2, err := testStore.GetEntry(context.Background(), Entry1.ID)
 	require.Error(t, err)
-	require.EqualError(t, err, sql.ErrNoRows.Error())
+	require.EqualError(t, err, ErrRecordNotFound.Error())
 	require.Empty(t, Entry2)
 
 }
@@ -78,7 +77,7 @@ func TestListEntry(t *testing.T) {
 		Limit:  5,
 		Offset: 5,
 	}
-	Entrys, err := testQuery.ListEntry(context.Background(), arg)
+	Entrys, err := testStore.ListEntry(context.Background(), arg)
 	require.NoError(t, err)
 	require.Len(t, Entrys, 5)
 	for _, Entry := range Entrys {
