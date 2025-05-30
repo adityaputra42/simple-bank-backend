@@ -61,7 +61,7 @@ func TestUpdateUserApi(t *testing.T) {
 
 			},
 			buildContext: func(t *testing.T, tokenMaker token.Maker) context.Context {
-				ctx := newContextWithBearerToken(t, tokenMaker, user.Username, time.Minute)
+				ctx := newContextWithBearerToken(t, tokenMaker, user.Username, user.Role, time.Minute)
 				return ctx
 			},
 			checkResponse: func(t *testing.T, res *pb.UpdateUserResponse, err error) {
