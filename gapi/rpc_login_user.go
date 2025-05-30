@@ -35,7 +35,7 @@ func (server *Server) LoginUser(ctx context.Context, req *pb.LoginUserRequest) (
 	mtdt := server.extractMetadata(ctx)
 	log.Printf("userAgent: %v", mtdt.UserAgent)
 	log.Printf("ClientIp: %v", mtdt.ClientIP)
-	accessToken, err := server.tokenMaker.CreateToken(user.Username, server.config.AccessTokenDuration)
+	accessToken, err := server.tokenMaker.CreateToken(user.Username, user.Role, server.config.AccessTokenDuration)
 
 	if err != nil {
 		status.Errorf(codes.Internal, "Failed to create access token")
