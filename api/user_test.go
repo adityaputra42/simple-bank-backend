@@ -190,7 +190,7 @@ func TestCreateUserApi(t *testing.T) {
 			request, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(data))
 			require.NoError(t, err)
 
-			server.route.ServeHTTP(recorder, request)
+			server.router.ServeHTTP(recorder, request)
 
 			// check response
 			tc.checkResponse(t, recorder)

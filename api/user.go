@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	db "simple-bank/db/sqlc"
+	"simple-bank/token"
 	"simple-bank/util"
 	"time"
 
@@ -101,9 +102,12 @@ func (sever *Server) LoginUser(ctx *gin.Context) {
 		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
 		return
 	}
-
-	accessToken, err := sever.tokenMaker.CreateToken(user.Username, user.Role, sever.config.AccessTokenDuration)
-
+	accessToken, _, err := sever.tokenMaker.CreateToken(
+		user.Username,
+		user.Role,
+		sever.config.AccessTokenDuration,
+		token.TokenTypeAccessToken,
+	)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
