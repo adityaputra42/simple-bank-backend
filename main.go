@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"errors"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"net"
 	"net/http"
@@ -16,8 +19,10 @@ import (
 
 	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rs/cors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/sync/errgroup"
 
 	_ "simple-bank/doc/statik"
 
@@ -33,6 +38,12 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
+var interruptSignals = []os.Signal{
+	os.Interrupt,
+	syscall.SIGTERM,
+	syscall.SIGINT,
+}
+
 func main() {
 
 	config, err := util.LoadConfig(".")
@@ -42,6 +53,9 @@ func main() {
 	if config.Environment == "development" {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), interruptSignals...)
+	defer stop()
 	connPool, err := pgxpool.New(context.Background(), config.DbSource)
 
 	if err != nil {
@@ -55,9 +69,17 @@ func main() {
 		Addr: config.RedisAddress,
 	}
 	taskDistributor := worker.NewRedisTaskDistributor(redisOpt)
-	go runTaskProcessor(config, redisOpt, store)
-	go runGatewayServer(config, store, taskDistributor)
-	runGrpcServer(config, store, taskDistributor)
+
+	waitGroup, ctx := errgroup.WithContext(ctx)
+
+	runTaskProcessor(ctx, waitGroup, config, redisOpt, store)
+	runGatewayServer(ctx, waitGroup, config, store, taskDistributor)
+	runGrpcServer(ctx, waitGroup, config, store, taskDistributor)
+
+	err = waitGroup.Wait()
+	if err != nil {
+		log.Fatal().Err(err).Msg("error from wait group")
+	}
 
 }
 
@@ -73,47 +95,93 @@ func runDbMigration(migrationUrl string, dbSource string) {
 	log.Info().Msg("db migration successfuly")
 }
 
-func runTaskProcessor(config util.Config, redisOpt asynq.RedisClientOpt, store db.Store) {
-	sender := mail.NewGmailSender(config.EmailSenderName, config.EmailSenderAddress, config.EmailSenderPassword)
-	taskProcessor := worker.NewRedisTaskProcessor(redisOpt, store, sender)
-	log.Info().Msg("Start task Processor")
+func runTaskProcessor(
+	ctx context.Context,
+	waitGroup *errgroup.Group,
+	config util.Config,
+	redisOpt asynq.RedisClientOpt,
+	store db.Store,
+) {
+	mailer := mail.NewGmailSender(config.EmailSenderName, config.EmailSenderAddress, config.EmailSenderPassword)
+	taskProcessor := worker.NewRedisTaskProcessor(redisOpt, store, mailer)
+
+	log.Info().Msg("start task processor")
 	err := taskProcessor.Start()
 	if err != nil {
-		log.Fatal().Err(err).Msg("cannot start task Processor")
+		log.Fatal().Err(err).Msg("failed to start task processor")
 	}
+
+	waitGroup.Go(func() error {
+		<-ctx.Done()
+		log.Info().Msg("graceful shutdown task processor")
+
+		taskProcessor.Shutdown()
+		log.Info().Msg("task processor is stopped")
+
+		return nil
+	})
 }
 
-func runGrpcServer(config util.Config, store db.Store, taskDistributor worker.TaskDistributor) {
-
+func runGrpcServer(
+	ctx context.Context,
+	waitGroup *errgroup.Group,
+	config util.Config,
+	store db.Store,
+	taskDistributor worker.TaskDistributor,
+) {
 	server, err := gapi.NewServerGrpc(config, store, taskDistributor)
 	if err != nil {
-		log.Fatal().Msg("Cannot create server")
+		log.Fatal().Err(err).Msg("cannot create server")
 	}
 
-	grpcLogger := grpc.UnaryInterceptor(gapi.GrpcLogger)
-	grpcServer := grpc.NewServer(grpcLogger)
+	gprcLogger := grpc.UnaryInterceptor(gapi.GrpcLogger)
+	grpcServer := grpc.NewServer(gprcLogger)
 	pb.RegisterSimpleBankServer(grpcServer, server)
 	reflection.Register(grpcServer)
 
 	listener, err := net.Listen("tcp", config.GrpcServerAddress)
 	if err != nil {
-		log.Fatal().Msg("Cannot create listener")
+		log.Fatal().Err(err).Msg("cannot create listener")
 	}
 
-	log.Info().Msgf("start gRPC server at %s", listener.Addr().String())
+	waitGroup.Go(func() error {
+		log.Info().Msgf("start gRPC server at %s", listener.Addr().String())
 
-	err = grpcServer.Serve(listener)
-	if err != nil {
-		log.Fatal().Msg("Cannot start gRPC server")
-	}
+		err = grpcServer.Serve(listener)
+		if err != nil {
+			if errors.Is(err, grpc.ErrServerStopped) {
+				return nil
+			}
+			log.Error().Err(err).Msg("gRPC server failed to serve")
+			return err
+		}
+
+		return nil
+	})
+
+	waitGroup.Go(func() error {
+		<-ctx.Done()
+		log.Info().Msg("graceful shutdown gRPC server")
+
+		grpcServer.GracefulStop()
+		log.Info().Msg("gRPC server is stopped")
+
+		return nil
+	})
 }
 
-func runGatewayServer(config util.Config, store db.Store, taskDistributor worker.TaskDistributor) {
-
+func runGatewayServer(
+	ctx context.Context,
+	waitGroup *errgroup.Group,
+	config util.Config,
+	store db.Store,
+	taskDistributor worker.TaskDistributor,
+) {
 	server, err := gapi.NewServerGrpc(config, store, taskDistributor)
 	if err != nil {
-		log.Fatal().Msg("Cannot create server")
+		log.Fatal().Err(err).Msg("cannot create server")
 	}
+
 	jsonOption := runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{
 		MarshalOptions: protojson.MarshalOptions{
 			UseProtoNames: true,
@@ -122,51 +190,85 @@ func runGatewayServer(config util.Config, store db.Store, taskDistributor worker
 			DiscardUnknown: true,
 		},
 	})
-	grpcMux := runtime.NewServeMux(jsonOption)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	err = pb.RegisterSimpleBankHandlerServer(ctx, grpcMux, server)
 
+	grpcMux := runtime.NewServeMux(jsonOption)
+
+	err = pb.RegisterSimpleBankHandlerServer(ctx, grpcMux, server)
 	if err != nil {
-		log.Fatal().Msg("cannot register handler server")
+		log.Fatal().Err(err).Msg("cannot register handler server")
 	}
 
 	mux := http.NewServeMux()
-
 	mux.Handle("/", grpcMux)
 
-	// fs := http.FileServer(http.Dir("./doc/swagger"))
-	statikFs, err := fs.New()
-
+	statikFS, err := fs.New()
 	if err != nil {
-		log.Fatal().Msg("cannot create static fs: ")
+		log.Fatal().Err(err).Msg("cannot create statik fs")
 	}
 
-	swaggerHandler := http.StripPrefix("/swagger/", http.FileServer(statikFs))
-
+	swaggerHandler := http.StripPrefix("/swagger/", http.FileServer(statikFS))
 	mux.Handle("/swagger/", swaggerHandler)
 
-	listener, err := net.Listen("tcp", config.HttpServerAddress)
-	if err != nil {
-		log.Fatal().Msg("Cannot create listener: ")
+	c := cors.New(cors.Options{
+		AllowedOrigins: config.AllowedOrigins,
+		AllowedMethods: []string{
+			http.MethodHead,
+			http.MethodOptions,
+			http.MethodGet,
+			http.MethodPost,
+			http.MethodPut,
+			http.MethodPatch,
+			http.MethodDelete,
+		},
+		AllowedHeaders: []string{
+			"Content-Type",
+			"Authorization",
+		},
+		AllowCredentials: true,
+	})
+	handler := c.Handler(gapi.HttpLogger(mux))
+
+	httpServer := &http.Server{
+		Handler: handler,
+		Addr:    config.HttpServerAddress,
 	}
 
-	log.Info().Msgf("start Http Gateway server at %s", listener.Addr().String())
-	handler := gapi.HttpLogger(mux)
-	err = http.Serve(listener, handler)
-	if err != nil {
-		log.Fatal().Msg("Cannot start HTTP Gateway server")
-	}
+	waitGroup.Go(func() error {
+		log.Info().Msgf("start HTTP gateway server at %s", httpServer.Addr)
+		err = httpServer.ListenAndServe()
+		if err != nil {
+			if errors.Is(err, http.ErrServerClosed) {
+				return nil
+			}
+			log.Error().Err(err).Msg("HTTP gateway server failed to serve")
+			return err
+		}
+		return nil
+	})
+
+	waitGroup.Go(func() error {
+		<-ctx.Done()
+		log.Info().Msg("graceful shutdown HTTP gateway server")
+
+		err := httpServer.Shutdown(context.Background())
+		if err != nil {
+			log.Error().Err(err).Msg("failed to shutdown HTTP gateway server")
+			return err
+		}
+
+		log.Info().Msg("HTTP gateway server is stopped")
+		return nil
+	})
 }
 
 func runGinServer(config util.Config, store db.Store) {
 	server, err := api.NewServer(config, store)
 	if err != nil {
-		log.Fatal().Msg("Cannot create server")
+		log.Fatal().Err(err).Msg("cannot create server")
 	}
 
 	err = server.Start(config.HttpServerAddress)
 	if err != nil {
-		log.Fatal().Msg("Cannot start server")
+		log.Fatal().Err(err).Msg("cannot start server")
 	}
 }

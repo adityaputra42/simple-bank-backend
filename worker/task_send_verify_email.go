@@ -39,43 +39,41 @@ func (distributor *RedisTaskDistributor) DistributeTaskSendVerifyEmail(
 	return nil
 }
 
-// ProcessTaskSendVerifyEmail implements TaskProsessor.
-func (processor *RedisTaskProsesor) ProcessTaskSendVerifyEmail(ctx context.Context, task *asynq.Task) error {
+func (processor *RedisTaskProcessor) ProcessTaskSendVerifyEmail(ctx context.Context, task *asynq.Task) error {
 	var payload PayloadSendVerifyEmail
-
 	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
-		return fmt.Errorf("failed to unmarshal payload : %w", asynq.SkipRetry)
+		return fmt.Errorf("failed to unmarshal payload: %w", asynq.SkipRetry)
 	}
+
 	user, err := processor.store.GetUser(ctx, payload.Username)
 	if err != nil {
-		// if err == errRecordNotFound {
-		// 	return fmt.Errorf("user not found : %w", asynq.SkipRetry)
-		// }
-		return fmt.Errorf("failed to get user : %w", err)
+		return fmt.Errorf("failed to get user: %w", err)
 	}
-	arg := db.CreateVerifyEmailParams{
+
+	verifyEmail, err := processor.store.CreateVerifyEmail(ctx, db.CreateVerifyEmailParams{
 		Username:   user.Username,
 		Email:      user.Email,
 		SecretCode: util.RandomString(32),
-	}
-
-	verifyEmail, err := processor.store.CreateVerifyEmail(ctx, arg)
+	})
 	if err != nil {
-		return fmt.Errorf("failed to create verify enail : %w", err)
+		return fmt.Errorf("failed to create verify email: %w", err)
 	}
 
-	subject := "welcome to simple bank"
-	verifyUrl := fmt.Sprintf("http://localhost:8080/v1/verify_email?email_id=%d&secret_code=%s", verifyEmail.ID, verifyEmail.SecretCode)
+	subject := "Welcome to Simple Bank"
+	// TODO: replace this URL with an environment variable that points to a front-end page
+	verifyUrl := fmt.Sprintf("http://localhost:8080/v1/verify_email?email_id=%d&secret_code=%s",
+		verifyEmail.ID, verifyEmail.SecretCode)
 	content := fmt.Sprintf(`Hello %s,<br/>
-	Thank you for registering with us! <br/>
-	Please <a href="%s">click here</a> to verify your email address.<br/>`, user.FullName, verifyUrl)
+	Thank you for registering with us!<br/>
+	Please <a href="%s">click here</a> to verify your email address.<br/>
+	`, user.FullName, verifyUrl)
+	to := []string{user.Email}
 
-	err = processor.mailer.SendEmail(subject, content, []string{verifyEmail.Email}, nil, nil, nil)
+	err = processor.mailer.SendEmail(subject, content, to, nil, nil, nil)
 	if err != nil {
-		return fmt.Errorf("failed to send verify email : %w", err)
+		return fmt.Errorf("failed to send verify email: %w", err)
 	}
 
-	// Send email to user
 	log.Info().Str("type", task.Type()).Bytes("payload", task.Payload()).
 		Str("email", user.Email).Msg("processed task")
 	return nil

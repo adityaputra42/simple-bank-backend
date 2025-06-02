@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/rs/zerolog"
@@ -8,6 +9,11 @@ import (
 )
 
 type Logger struct {
+}
+
+// Printf implements internal.Logging.
+func (logger *Logger) Printf(ctx context.Context, format string, v ...interface{}) {
+	panic("unimplemented")
 }
 
 func NewLogger() *Logger {

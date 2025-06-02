@@ -37,7 +37,8 @@ func (server *Server) authorizationUser(ctx context.Context, accessableRole []st
 
 	}
 	accesToken := fields[len(fields)-1]
-	payload, err := server.tokenMaker.VerifyToken(accesToken)
+
+	payload, err := server.tokenMaker.VerifyToken(accesToken, token.TokenTypeAccessToken)
 	if err != nil {
 		return nil, fmt.Errorf("unauthorization")
 	}

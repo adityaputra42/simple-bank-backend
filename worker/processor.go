@@ -5,6 +5,7 @@ import (
 	db "simple-bank/db/sqlc"
 	"simple-bank/mail"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/hibiken/asynq"
 	"github.com/rs/zerolog/log"
 )
@@ -14,27 +15,22 @@ const (
 	QueueDefault  = "default"
 )
 
-type TaskProsessor interface {
+type TaskProcessor interface {
 	Start() error
+	Shutdown()
 	ProcessTaskSendVerifyEmail(ctx context.Context, task *asynq.Task) error
 }
 
-type RedisTaskProsesor struct {
+type RedisTaskProcessor struct {
 	server *asynq.Server
 	store  db.Store
 	mailer mail.EmailSender
 }
 
-// Start implements TaskProsessor.
-func (processor *RedisTaskProsesor) Start() error {
-	mux := asynq.NewServeMux()
+func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store, mailer mail.EmailSender) TaskProcessor {
+	logger := NewLogger()
+	redis.SetLogger(logger)
 
-	mux.HandleFunc(TaskSendVerifyEmail, processor.ProcessTaskSendVerifyEmail)
-
-	return processor.server.Start(mux)
-}
-
-func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, db db.Store, mailer mail.EmailSender) TaskProsessor {
 	server := asynq.NewServer(
 		redisOpt,
 		asynq.Config{
@@ -46,9 +42,25 @@ func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, db db.Store, mailer ma
 				log.Error().Err(err).Str("type", task.Type()).
 					Bytes("payload", task.Payload()).Msg("process task failed")
 			}),
-			Logger: NewLogger(),
+			Logger: logger,
 		},
 	)
 
-	return &RedisTaskProsesor{server: server, store: db, mailer: mailer}
+	return &RedisTaskProcessor{
+		server: server,
+		store:  store,
+		mailer: mailer,
+	}
+}
+
+func (processor *RedisTaskProcessor) Start() error {
+	mux := asynq.NewServeMux()
+
+	mux.HandleFunc(TaskSendVerifyEmail, processor.ProcessTaskSendVerifyEmail)
+
+	return processor.server.Start(mux)
+}
+
+func (processor *RedisTaskProcessor) Shutdown() {
+	processor.server.Shutdown()
 }
